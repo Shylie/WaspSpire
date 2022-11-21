@@ -78,7 +78,7 @@ package WaspSpire
 			
 			lattice.patchFile(
 				FILE_NAME,
-				offset - 5,
+				offset - 2,
 				0,
 				' \
 				getlocal 8 \n \
@@ -93,16 +93,13 @@ package WaspSpire
 			var FILE_NAME: String = "com/giab/games/gcfw/ingame/IngameController.class.asasm";
 			
 			var offset: int = lattice.findPattern(FILE_NAME, /trait method QName\(PackageNamespace\(""\), "towerShotHitsTarget"\)/);
-			
-			logger.log("", "Applying IngameController Coremod (part 1): " + String(offset));
-			
 			offset = lattice.findPattern(FILE_NAME, /getproperty QName\(PackageNamespace\(""\), "_showShotImpactEffects"\)/, offset);
 			
-			logger.log("", "Applying IngameController Coremod (part 2): " + String(offset));
+			logger.log("", "Applying IngameController Coremod (Part 1): " + String(offset));
 			
 			lattice.patchFile(
 				FILE_NAME,
-				offset,
+				offset - 2,
 				0,
 				' \
 				getlocal1 \n \
@@ -111,7 +108,7 @@ package WaspSpire
 				getlocal0 \n \
 				getproperty QName(PackageNamespace(""), "core") \n \
 				getproperty QName(PackageNamespace(""), "gemWasps") \n \
-				findpropstrict QName(PackageNamespace("com.giab.games.gcfw.entity")," GemWasp") \n \
+				findpropstrict QName(PackageNamespace("com.giab.games.gcfw.entity"), "GemWasp") \n \
 				getlocal1 \n \
 				getproperty QName(PackageNamespace(""), "originGem") \n \
 				getlocal1 \n \
@@ -120,9 +117,20 @@ package WaspSpire
 				getproperty QName(PackageNamespace(""), "lastY") \n \
 				constructprop QName(PackageNamespace("com.giab.games.gcfw.entity"), "GemWasp"), 3 \n \
 				callpropvoid QName(Namespace("http://adobe.com/AS3/2006/builtin"), "push"), 1 \n \
-				returnvoid \n \
+				jump wasp \n \
 				notwasp: \n \
 				'
+			);
+			
+			offset = lattice.findPattern(FILE_NAME, /getproperty QName\(PackageNamespace\(""\), "cnt"\)/, offset);
+			
+			logger.log("", "Applying IngameController Coremod (Part 2): " + String(offset));
+			
+			lattice.patchFile(
+				FILE_NAME,
+				offset - 2,
+				0,
+				'wasp:'
 			);
 		}
 		
