@@ -1,4 +1,4 @@
-package WaspSpire 
+package Hive 
 {
 	import Bezel.Bezel;
 	import Bezel.BezelCoreMod;
@@ -11,7 +11,7 @@ package WaspSpire
 	 * ...
 	 * @author Shy
 	 */
-	public class WaspSpireMod extends MovieClip implements BezelCoreMod
+	public class HiveMod extends MovieClip implements BezelCoreMod
 	{
 		public function get VERSION(): String { return "0.0.1"; }
 		public function get GAME_VERSION(): String { return "1.2.1a"; }
@@ -25,9 +25,9 @@ package WaspSpire
 		
 		internal static var bezel: Bezel;
 		internal static var logger: Logger;
-		internal static var instance: WaspSpireMod;
+		internal static var instance: HiveMod;
 		
-		public function WaspSpireMod()
+		public function HiveMod()
 		{
 			super();
 			
