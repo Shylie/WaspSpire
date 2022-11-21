@@ -4,7 +4,7 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="obj\WaspTower-0.1.0.swf" />
+    <movie path="obj\Hive-0.1.0.swf" />
     <movie fps="30" />
     <movie width="1920" />
     <movie height="1080" />

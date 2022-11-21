@@ -4,8 +4,10 @@ package Hive
 	import Bezel.BezelCoreMod;
 	import Bezel.Lattice.Lattice;
 	import Bezel.Logger;
+	import Bezel.Utils.Keybind;
 	import flash.display.MovieClip;
-	import flash.events.Event;
+	import flash.display.Sprite;
+	import flash.events.KeyboardEvent;
 	
 	/**
 	 * ...
@@ -13,10 +15,12 @@ package Hive
 	 */
 	public class HiveMod extends MovieClip implements BezelCoreMod
 	{
+		public static const MODIFIER_KEY: String = "(Hive) Alternate building type modifier";
+		
 		public function get VERSION(): String { return "0.0.1"; }
 		public function get GAME_VERSION(): String { return "1.2.1a"; }
 		public function get BEZEL_VERSION(): String { return "2.0.6"; }
-		public function get MOD_NAME(): String { return "Wasp Spire"; }
+		public function get MOD_NAME(): String { return "Hive"; }
 		
 		CONFIG::debug
 		public function get COREMOD_VERSION(): String { return String(Math.random()); }
@@ -26,6 +30,9 @@ package Hive
 		internal static var bezel: Bezel;
 		internal static var logger: Logger;
 		internal static var instance: HiveMod;
+		internal static var gameObjects: Object;
+		
+		public static var modifierKeyPressed: Boolean;
 		
 		public function HiveMod()
 		{
@@ -35,26 +42,69 @@ package Hive
 			logger = Logger.getLogger(MOD_NAME);
 		}
 		
-		public function bind(modLoader: Bezel, gos: Object): void
+		public function bind(modLoader: Bezel, gameObjects: Object): void
 		{
 			bezel = modLoader;
+			HiveMod.gameObjects = gameObjects;
+			
+			addEventListeners();
 		}
 		
 		public function unload(): void
 		{
-			
+			removeEventListeners();
 		}
 		
 		public function loadCoreMod(lattice: Lattice): void
 		{
+			addTowerWaspField(lattice);
 			addTowerShotWaspField(lattice);
 			addIngameCreatorCreateTowerShotTypeCheck(lattice);
+			addBuildTowerCoremod(lattice);
 			addIngameControllerTowerShotHitsTargetTypeCheck(lattice);
+		}
+		
+		private function addEventListeners(): void
+		{
+			gameObjects.main.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, true);
+			gameObjects.main.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp, true);
+		}
+		
+		private function removeEventListeners(): void
+		{
+			gameObjects.main.stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown, true);
+			gameObjects.main.stage.removeEventListener(KeyboardEvent.KEY_UP, onKeyUp, true);
+		}
+		
+		private function onKeyDown(e: KeyboardEvent): void
+		{
+			modifierKeyPressed = e.altKey;
+		}
+		
+		private function onKeyUp(e: KeyboardEvent): void
+		{
+			modifierKeyPressed = e.altKey;
+		}
+		
+		private function addTowerWaspField(lattice: Lattice): void
+		{
+			const FILE_NAME: String = "com/giab/games/gcfw/entity/Tower.class.asasm";
+			
+			var offset: int = lattice.findPattern(FILE_NAME, /trait slot QName\(PackageNamespace\(""\), "notShootingSleepingHive"\)/);
+			
+			logger.log("", "Applying Tower Coremod: " + String(offset));
+			
+			lattice.patchFile(
+				FILE_NAME,
+				offset - 1,
+				0,
+				'trait slot QName(PackageNamespace(""), "isWasp") type QName(PackageNamespace(""), "Boolean") value False() end'
+			);
 		}
 		
 		private function addTowerShotWaspField(lattice: Lattice): void
 		{
-			var FILE_NAME: String = "com/giab/games/gcfw/entity/TowerShot.class.asasm";
+			const FILE_NAME: String = "com/giab/games/gcfw/entity/TowerShot.class.asasm";
 			
 			var offset: int = lattice.findPattern(FILE_NAME, /trait slot QName\(PackageNamespace\(""\), "ctr"\)/);
 			
@@ -70,27 +120,29 @@ package Hive
 		
 		private function addIngameCreatorCreateTowerShotTypeCheck(lattice: Lattice): void
 		{
-			var FILE_NAME: String = "com/giab/games/gcfw/ingame/IngameCreator.class.asasm";
+			const FILE_NAME: String = "com/giab/games/gcfw/ingame/IngameCreator.class.asasm";
 			
-			var offset: int = lattice.findPattern(FILE_NAME, /getlocal0\ngetproperty QName\(PackageNamespace\(""\), "core"\)\ngetproperty QName\(PackageNamespace\(""\), "towerShots"\)\ngetlocal 8\ncallpropvoid QName\(Namespace\("http:\/\/adobe.com\/AS3\/2006\/builtin"\), "push"\), 1/);
+			var offset: int = lattice.findPattern(FILE_NAME, /trait method QName\(PackageNamespace\(""\), "createTowerShot"\)/);
+			offset = lattice.findPattern(FILE_NAME, /setlocal 8/, offset);
 			
-			logger.log("", "Applying IngameCreator Coremod: " + String(offset));
+			logger.log("", "Applying IngameCreator::createTowerShot Coremod: " + String(offset));
 			
 			lattice.patchFile(
 				FILE_NAME,
-				offset - 2,
+				offset,
 				0,
 				' \
 				getlocal 8 \n \
-				pushtrue \n \
-				setproperty QName(PackageNamespace(""), "isWasp") \n \
+				getlocal1 \n \
+				getproperty QName(PackageNamespace(""), "isWasp") \
+				setproperty QName(PackageNamespace(""), "isWasp") \
 				'
 			);
 		}
 		
 		private function addIngameControllerTowerShotHitsTargetTypeCheck(lattice: Lattice): void
 		{
-			var FILE_NAME: String = "com/giab/games/gcfw/ingame/IngameController.class.asasm";
+			const FILE_NAME: String = "com/giab/games/gcfw/ingame/IngameController.class.asasm";
 			
 			var offset: int = lattice.findPattern(FILE_NAME, /trait method QName\(PackageNamespace\(""\), "towerShotHitsTarget"\)/);
 			offset = lattice.findPattern(FILE_NAME, /getproperty QName\(PackageNamespace\(""\), "_showShotImpactEffects"\)/, offset);
@@ -118,7 +170,7 @@ package Hive
 				constructprop QName(PackageNamespace("com.giab.games.gcfw.entity"), "GemWasp"), 3 \n \
 				callpropvoid QName(Namespace("http://adobe.com/AS3/2006/builtin"), "push"), 1 \n \
 				jump wasp \n \
-				notwasp: \n \
+				notwasp: \
 				'
 			);
 			
@@ -134,18 +186,34 @@ package Hive
 			);
 		}
 		
-		/*
-			getlocal0
-            getproperty QName(PackageNamespace(""),"core")
-            getproperty QName(PackageNamespace(""),"gemWasps")
-            findpropstrict QName(PackageNamespace("com.giab.games.gcfw.entity"),"GemWasp")
-            getlocal 4 // gem
-            getlocal1
-            getproperty QName(PackageNamespace(""),"x")
-            getlocal1
-            getproperty QName(PackageNamespace(""),"y")
-            constructprop QName(PackageNamespace("com.giab.games.gcfw.entity"),"GemWasp"), 3
-            callpropvoid QName(Namespace("http://adobe.com/AS3/2006/builtin"),"push"), 1
-		*/
+		private function addBuildTowerCoremod(lattice: Lattice): void
+		{
+			const FILE_NAME: String = "com/giab/games/gcfw/ingame/IngameCreator.class.asasm";
+			
+			var offset: int = lattice.findPattern(FILE_NAME, /trait method QName\(PackageNamespace\(""\), "buildTower"\)/);
+			offset = lattice.findPattern(FILE_NAME, /setlocal 4/, offset);
+			
+			logger.log("", "Applying IngameCreator::buildTower Coremod: " + String(offset));
+			
+			lattice.patchFile(
+				FILE_NAME,
+				offset,
+				0,
+				' \
+				getlocal 4 \n \
+				getlex QName(PackageNamespace("com.giab.games.gcfw"), "GV") \n \
+				getproperty QName(PackageNamespace(""), "main") \n \
+				getproperty QName(PackageNamespace(""), "bezel") \n \
+				pushstring "' + MOD_NAME + '" \n \
+				callproperty QName(PackageNamespace(""), "getModByName"), 1 \n \
+				getproperty QName(PackageNamespace(""), "loaderInfo") \n \
+				getproperty QName(PackageNamespace(""), "applicationDomain") \n \
+				pushstring "Hive.HiveMod" \n \
+				callproperty QName(PackageNamespace(""), "getDefinition"), 1 \n \
+				getproperty QName(PackageNamespace(""), "modifierKeyPressed") \n \
+				setproperty QName(PackageNamespace(""), "isWasp") \
+				'
+			);
+		}
 	}
 }
